@@ -1,6 +1,7 @@
 #include <iostream>
 #include <filesystem>
 #include <vector>
+#include <string>
 
 
 auto recursiveGetFileNamesByExtension (std::filesystem::path path, const std::string extension)
@@ -15,11 +16,11 @@ auto recursiveGetFileNamesByExtension (std::filesystem::path path, const std::st
     };
 
 
-    void parseGmiString(std::string gmiString){
+ void parseGmiString(std::string gmiString){
 
     }
 //enum headerLevel{0, H1, H2, H3}
-std::string insertHeader(std::string headerString, int headerLevel){
+std::string addHeader(std::string headerString, int headerLevel){
         std::string stringResult;
         if (headerLevel < 1 || headerLevel > 3) {
             return headerString;
@@ -31,7 +32,7 @@ std::string insertHeader(std::string headerString, int headerLevel){
         return stringResult;
     }
 
-std::string insertHyperLink(std::string URI_adrres, std::string linkText){
+std::string addHyperLink(std::string URI_adrres, std::string linkText){
         std::string stringResult;
         stringResult = "<a href = \"" + URI_adrres + "\">" +  // start tag
                         linkText +                              // text
@@ -39,7 +40,7 @@ std::string insertHyperLink(std::string URI_adrres, std::string linkText){
         return stringResult;
     }
 
-std::string insertQuote(std::string textQuote){
+std::string addQuote(std::string textQuote){
         std::string stringResult;
         stringResult = "<blockqoute>" +  // start tag
 //TODO многострочная цитата - подумать как реализовать (надо <br> завместо \n вставлять)
@@ -48,7 +49,7 @@ std::string insertQuote(std::string textQuote){
         return stringResult;
 }
 
-std::string insertLists(std::string ListElement){
+std::string addLists(std::string ListElement){
         std::string stringResult;
         stringResult = "<ul><li>" +   // start tag
                         ListElement +                              // text
@@ -56,7 +57,7 @@ std::string insertLists(std::string ListElement){
         return stringResult;
 }
 
-std::string insertLists(std::vector<std::string> ListElements){
+std::string addLists(std::vector<std::string> ListElements){
         std::string stringResult;
         stringResult = "<ul>";   // start tag
             for (auto const &elList:ListElements){
@@ -69,12 +70,12 @@ std::string insertLists(std::vector<std::string> ListElements){
         return stringResult;
 }
 
-std::string insertPreformatedText(std::string inputText){
-
+std::string addPreformatedText(std::string inputText){
+    return std::string();
 }
 
-std::string insertPlainText(std::string inputText){
-    
+std::string addPlainText(std::string inputText){
+    return std::string();
 }
 
 int main() {
@@ -82,14 +83,13 @@ int main() {
 //   for (auto f_name=res->begin();f_name!=res->end();++f_name)
 //       std::cout << *f_name << " " << std::endl;
 
-    std::cout << insertHeader("Heder 1", 1)  << std::endl; 
-    std::cout << insertHeader("Heder 2", 2)  << std::endl; 
-    std::cout << insertHeader("Heder 3", 3)  << std::endl;
-    std::cout << insertHyperLink("http://google.com", "Google COM") << std::endl;
-    std::cout << insertQuote(" А этот обра кадабра тексат я попробую вывестик как нибудь") << std::endl;
-    std::cout << insertLists("Это будет простой однострочный список") << std::endl;
-    std::cout << insertLists({"Элемент 1","Element 2", "Element 3", "Element 4"}) << std::endl;
-
+    std::cout << addHeader("Heder 1", 1)  << std::endl; 
+    std::cout << addHeader("Heder 2", 2)  << std::endl; 
+    std::cout << addHeader("Heder 3", 3)  << std::endl;
+    std::cout << addHyperLink("http://google.com", "Google COM") << std::endl;
+    std::cout << addQuote(" А этот обра кадабра тексат я попробую вывестик как нибудь") << std::endl;
+    std::cout << addLists("Это будет простой однострочный список") << std::endl;
+    std::cout << addLists({"Элемент 1","Element 2", "Element 3", "Element 4"}) << std::endl;
     return 0;
 }
 

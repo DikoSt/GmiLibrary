@@ -1,101 +1,295 @@
-#include <iostream>
 #include <filesystem>
-#include <vector>
+#include <iostream>
 #include <string>
+#include <vector>
 
 
-auto recursiveGetFileNamesByExtension (std::filesystem::path path, const std::string extension)
-    {
-        std::vector<std::string> list_filename;
-        for(auto& p: std::filesystem::recursive_directory_iterator(path)) {
-            if (p.is_regular_file() && !p.path().extension().compare(extension)){
-                list_filename.push_back(p.path().filename().string());
-            }
+std::vector<std::string> htmlDoc;
+std::vector<std::string> gmiDoc;
+
+int startFlag = 0;
+enum START_FLAG {
+  START_QUOTE = 1 << 0,
+  START_LIST = 1 << 1,
+  START_PRETEXT = 1 << 2
+};
+
+void addHeader(std::string headerString, int headerLevel);
+void addHyperLink(std::string URI_adrres, std::string linkText);
+void addQuote(std::string textQuote);
+void addPreformatedText(std::string inputText);
+void addPlainText(std::string inputText);
+void addStartQuote();
+void addEndQuote();
+void addStartList();
+void addEndList();
+void addListElement(std::string ListElement);
+void addLists(std::vector<std::string> ListElements);
+void addStartPreText();
+void addEndPreText();
+void addPreText(std::string);
+
+auto recursiveGetFileNamesByExtension(std::filesystem::path path,
+                                      const std::string extension) {
+  std::vector<std::string> list_filename;
+  for (auto &p : std::filesystem::recursive_directory_iterator(path)) {
+    if (p.is_regular_file() && !p.path().extension().compare(extension)) {
+      list_filename.push_back(p.path().filename().string());
+    }
+  }
+  return std::make_unique<std::vector<std::string>>(list_filename);
+};
+
+void parseGmiString(std::string gmiString) {
+  std::string command = gmiString.substr(0, gmiString.find(" "));
+  std::string lastString =
+      gmiString.substr(gmiString.find(" ") + 1, gmiString.size());
+
+  // если в пердыдущей строке была команда начала цитаты, а в текущей нет
+  // продолжения, то втсавляем знак конца блока цитаты и штатно обрабатываем
+  // строку далее
+  if (((startFlag & START_QUOTE) != 0) && command != ">") {
+    addEndQuote();
+    startFlag &= ~START_QUOTE;
+  }
+
+  // если в пердыдущей строке была команда начала списка, а в текущей нет
+  // продолжения, то втсавляем знак конца списка и штатно обрабатываем строку
+  // далее
+  if (((startFlag & START_LIST) != 0) && command != "*") {
+    addEndList();
+    startFlag &= ~START_LIST;
+  }
+
+  // конец преформатированный текст закончится только тогда когда встретится второй знак ```
+  //
+  if ((startFlag & START_PRETEXT) != 0){ 
+        if (command == "```"){
+            addEndPreText();
+            startFlag &= ~START_PRETEXT;
+            return;
+        }else{
+            addPreText(command + " " + lastString);
+            return;
         }
-        return std::make_unique<std::vector<std::string>>(list_filename);
-    };
-
-
- void parseGmiString(std::string gmiString){
-
-    }
-//enum headerLevel{0, H1, H2, H3}
-std::string addHeader(std::string headerString, int headerLevel){
-        std::string stringResult;
-        if (headerLevel < 1 || headerLevel > 3) {
-            return headerString;
-        }
-
-        stringResult += "<h" + std::to_string(headerLevel) + ">" +  // start tag
-                        headerString +                              // text
-                        "</h" + std::to_string(headerLevel) + ">";  // end tag
-        return stringResult;
     }
 
-std::string addHyperLink(std::string URI_adrres, std::string linkText){
-        std::string stringResult;
-        stringResult = "<a href = \"" + URI_adrres + "\">" +  // start tag
-                        linkText +                              // text
-                        "</a>";  // end tag
-        return stringResult;
+// команда заголовка первого уровня
+  if (command == "#") {
+    addHeader(lastString, 1);
+  }
+
+// команда заголовка второго уровня
+  else if (command == "##") {
+    addHeader(lastString, 2);
+  }
+// команда заголовка третьего уровня
+  else if (command == "###") {
+    addHeader(lastString, 3);
+  }
+
+// команда url-ссылки
+  else if (command == "=>") {
+    std::string URIString = lastString.substr(0, lastString.find(" "));
+    std::string linkString =
+        lastString.substr(lastString.find(" "), lastString.size());
+    addHyperLink(URIString, linkString);
+  }
+
+// команда цитаты
+  else if (command == ">") {
+    if ((startFlag & START_QUOTE) == 0) {
+      addStartQuote();
+      startFlag |= START_QUOTE;
     }
+    addPlainText(lastString);
+  }
 
-std::string addQuote(std::string textQuote){
-        std::string stringResult;
-        stringResult = "<blockqoute>" +  // start tag
-//TODO многострочная цитата - подумать как реализовать (надо <br> завместо \n вставлять)
-                        textQuote +                              // text
-                        "</blockqoute>";  // end tag
-        return stringResult;
+// команда списка
+  else if (command == "*") {
+    if ((startFlag & START_LIST) == 0) {
+      addStartList();
+      startFlag |= START_LIST;
+    }
+    addListElement(lastString);
+  }
+
+// команда преформатированного текса
+  else if (command == "```") {
+    if ((startFlag & START_PRETEXT) == 0) {
+      addStartPreText();
+      startFlag |= START_PRETEXT;
+    }
+    //addPreText(lastString);
+  }
+
+  // если никакой команды не опознано, то текст вставлям как есть.
+  else {
+    addPlainText(command + " " + lastString);
+    ;
+  }
 }
 
-std::string addLists(std::string ListElement){
-        std::string stringResult;
-        stringResult = "<ul><li>" +   // start tag
-                        ListElement +                              // text
-                        "</li></ul>";  // end tag
-        return stringResult;
+/** Методо добавляет в html документ строку-заголовок
+ * @param headerString - текст заголовка
+ * @param headerLevel - уровыень заголовка (1..3)
+ */
+// enum headerLevel{0, H1, H2, H3}
+void addHeader(std::string headerString, int headerLevel) {
+  std::string stringResult;
+  if (headerLevel < 1 || headerLevel > 3) {
+    addPlainText(headerString);
+  }
+
+  stringResult += "<h" + std::to_string(headerLevel) + ">" + // start tag
+                  headerString +                             // text
+                  "</h" + std::to_string(headerLevel) + ">"; // end tag
+  htmlDoc.push_back(stringResult);
 }
 
-std::string addLists(std::vector<std::string> ListElements){
-        std::string stringResult;
-        stringResult = "<ul>";   // start tag
-            for (auto const &elList:ListElements){
-                stringResult += "<li>" + elList + "</li>";
-                // if (printprety) {
-                //     stringResult += "\n";
-                // }
-            }
-        stringResult += "</ul>";  // end tag
-        return stringResult;
+/** Методо добавляет в html документ URL-ссылку
+ * @param URI_adrres - URL адрес
+ * @param linkText - текст в html-документе 
+ */
+void addHyperLink(std::string URI_adrres, std::string linkText) {
+  std::string stringResult;
+  stringResult = "<a href = \"" + URI_adrres + "\">" + // start tag
+                 linkText +                            // text
+                 "</a>";                               // end tag
+  htmlDoc.push_back(stringResult);
 }
 
-std::string addPreformatedText(std::string inputText){
-    return std::string();
+/** Методо добавляет в html документ тэг начала цитаты
+ */
+void addStartQuote() {
+  std::string stringResult;
+  stringResult = "<blockqoute>";
+  htmlDoc.push_back(stringResult);
 }
 
-std::string addPlainText(std::string inputText){
-    return std::string();
+/** Методо добавляет в html документ тэг конца цитаты
+ */
+void addEndQuote() {
+  std::string stringResult;
+  stringResult = "</blockqoute>";
+  htmlDoc.push_back(stringResult);
 }
+
+/** Методо добавляет в html документ тэг начала списка
+ */
+void addStartList() {
+  std::string stringResult;
+  stringResult = "<ul>"; // start tag
+  htmlDoc.push_back(stringResult);
+}
+
+/** Методо добавляет в html документ тэг конца списка
+ */
+void addEndList() {
+  std::string stringResult;
+  stringResult = "</ul>"; // start tag
+  htmlDoc.push_back(stringResult);
+}
+/** Методо добавляет в список элемент списка
+ * @param ListElement - текст жлемента списка
+ */
+void addListElement(std::string ListElement) {
+    if((startFlag & START_LIST)==0){
+        std::cerr << "WARNING!!! Start list absent!!!";
+    }
+  std::string stringResult;
+  stringResult = "<li>" + ListElement + "</li>";
+  htmlDoc.push_back(stringResult);
+}
+
+/** Методо добавляет в список html документ элементов
+ * @param ListElementы - вектор строк элемнетов списка
+ */
+void addLists(std::vector<std::string> ListElements) {
+  std::string stringResult;
+  stringResult = "<ul>"; // start tag
+  for (auto const &elList : ListElements) {
+    stringResult += "<li>" + elList + "</li>";
+  }
+  stringResult += "</ul>"; // end tag
+  htmlDoc.push_back(stringResult);
+}
+
+
+/**  Методо добавляет в html документ тэг начала перформатированного текста
+ */
+void addStartPreText() {
+    std::string stringResult;
+    stringResult += "<pre>"; // start tag
+    htmlDoc.push_back(stringResult);  
+}
+
+/**  Методо добавляет в html документ тэг конца перформатированного текста
+ */
+void addEndPreText() {
+    std::string stringResult;
+    stringResult += "</pre>"; // start tag
+    htmlDoc.push_back(stringResult);  
+}
+
+
+/** Методо добавляет в список html документ перформатированный текст
+ * @param inputText - текст который должен быть выведен
+ */
+void addPreText(std::string inputText) {
+    std::string stringResult;
+    stringResult += inputText + "\n";                             // text
+    htmlDoc.push_back(stringResult);  
+}
+
+
+/** Методо добавляет в список html документ элементов
+ * @param ListElements - вектор строк элемнетов списка
+ */
+void addPlainText(std::string inputText) { htmlDoc.push_back(inputText); }
 
 int main() {
-//   auto res = recursiveGetFileNamesByExtension("c:/program1/ProffesionCPlusplus", ".cpp");
-//   for (auto f_name=res->begin();f_name!=res->end();++f_name)
-//       std::cout << *f_name << " " << std::endl;
+  //   auto res =
+  //   recursiveGetFileNamesByExtension("c:/program1/ProffesionCPlusplus",
+  //   ".cpp"); for (auto f_name=res->begin();f_name!=res->end();++f_name)
+  //       std::cout << *f_name << " " << std::endl;
 
-    std::cout << addHeader("Heder 1", 1)  << std::endl; 
-    std::cout << addHeader("Heder 2", 2)  << std::endl; 
-    std::cout << addHeader("Heder 3", 3)  << std::endl;
-    std::cout << addHyperLink("http://google.com", "Google COM") << std::endl;
-    std::cout << addQuote(" А этот обра кадабра тексат я попробую вывестик как нибудь") << std::endl;
-    std::cout << addLists("Это будет простой однострочный список") << std::endl;
-    std::cout << addLists({"Элемент 1","Element 2", "Element 3", "Element 4"}) << std::endl;
-    return 0;
+  std::cout << std::endl;
+
+  parseGmiString("# Heder 1");
+  parseGmiString("## Heder 2");
+  parseGmiString("### Heder 3");
+  parseGmiString("* List Element");
+  parseGmiString("> Quote 1");
+  parseGmiString("> Quote 1");
+  parseGmiString("> Quote 1");
+  parseGmiString("> Quote 1");
+  parseGmiString("=> http://some-address.com Link 2");
+  parseGmiString("=> http://some-address.com Link");
+  parseGmiString("``` http://some-address.com Link");
+  parseGmiString("=> http://some-address.com Link");
+  parseGmiString("=> http://some-address.com Link");
+  parseGmiString("=> http://some-address.com Link");
+  parseGmiString("```");
+
+  parseGmiString("> Quote 1");
+  parseGmiString("> Quote 1");
+  parseGmiString("> Quote 1");
+  parseGmiString("> Quote 1");
+  parseGmiString(" ");
+
+
+  for (const auto &htmlString : htmlDoc) {
+    std::cout << htmlString << std::endl;
+  }
+
+  return 0;
 }
 
 /*
 
-Файл с расширением .gmi содержит в себе текст в упрощенной разметке, которая называется gemtext. Поддерживаются следующие возможности разметки:
+Файл с расширением .gmi содержит в себе текст в упрощенной разметке, которая
+называется gemtext. Поддерживаются следующие возможности разметки:
 
 # Заголовок первого уровня
 ## Заголовок второго уровня

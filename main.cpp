@@ -1,4 +1,6 @@
 #include "gmi.h"
+#include <filesystem>
+#include <fstream>
 
 auto recursiveGetFileNamesByExtension(std::filesystem::path path,
                                       const std::string extension) {
@@ -11,58 +13,28 @@ auto recursiveGetFileNamesByExtension(std::filesystem::path path,
   return std::make_unique<std::vector<std::string>>(list_filename);
 };
 
+
 int main() {
-
-std::cout << "Start programm" << std::endl;
-  //   auto res =
-  //   recursiveGetFileNamesByExtension("c:/program1/ProffesionCPlusplus",
-  //   ".cpp"); for (auto f_name=res->begin();f_name!=res->end();++f_name)
-  //       std::cout << *f_name << " " << std::endl;
-
 Gmi gmi;
-  std::cout << std::endl;
+std::cout << "Start programm" << std::endl;
+  
+    std::cout << std::endl;
+    std::fstream file;
 
-  gmi.parseGmiString("# Heder 1");
-  gmi.parseGmiString("## Heder 2");
-  gmi.parseGmiString("### Heder 3");
-  gmi.parseGmiString("* List Element");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("=> http://some-address.com Link 2");
-  gmi.parseGmiString("=> http://some-address.com Link");
-  gmi.parseGmiString("``` http://some-address.com Link");
-  gmi.parseGmiString("=> http://some-address.com Link");
-  gmi.parseGmiString("=> http://some-address.com Link");
-  gmi.parseGmiString("=> http://some-address.com Link");
-  gmi.parseGmiString("```");
+    file.open("../testgmi.gmi", std::ios::in);
 
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString("> Quote 1");
-  gmi.parseGmiString(" ");
+    if (file.is_open()){
+        file >> gmi;
+        file.close();
+    }
 
-  gmi.print();
+    file.open("../htmlresult.html", std::ios::out);
+
+    if (file.is_open()){
+        file << gmi.toHtml();
+        file.close();
+    }
+
 
  return 0;
 }
-
-/*
-
-Файл с расширением .gmi содержит в себе текст в упрощенной разметке, которая
-называется gemtext. Поддерживаются следующие возможности разметки:
-
-# Заголовок первого уровня
-## Заголовок второго уровня
-### Заголовок третьего уровня
-
-* Элемент списка
-
-> Цитата
-
-=> http://some-address.com Ссылка
-
-Преформатированный текст
-*/

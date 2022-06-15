@@ -208,8 +208,36 @@ void Gmi::addPreText(std::string inputText) {
  */
 void Gmi::addPlainText(std::string inputText) { htmlDoc.push_back(inputText); }
 
-void Gmi::print(){
-  for (const auto &htmlString : htmlDoc) {
-    std::cout << htmlString << std::endl;
-  }
+std::string Gmi::toHtml(){
+    std::string resultString;
+    htmlDoc.clear(); //очистим на всякий случай
+    htmlDoc.push_back("<HTML>");//начало html 
+    htmlDoc.push_back("<BODY>"); 
+        for (const auto &gmiStr:gmiDoc){
+            parseGmiString(gmiStr);
+        }    
+    htmlDoc.push_back("</BODY>");
+    htmlDoc.push_back("</HTML>"); // Завершение html
+// преобразуем всё это в строку и выведем
+    for (const auto &htmlStr : htmlDoc){
+        resultString += htmlStr + "\n";
+    }
+    return resultString;
 }
+
+std::ostream& operator<<(std::ostream &out, const Gmi &gmi)
+{
+    for (const auto &item:gmi.gmiDoc){
+    out << item << "\n";
+    }
+    return out;
+} 
+
+void operator>>(std::istream &in, Gmi &gmi){
+    std::string temp;
+    while (!in.eof()){
+        std::getline(in, temp);
+        gmi.gmiDoc.push_back(temp);
+    }
+    std::cout << temp;
+ }

@@ -62,7 +62,7 @@ void Gmi::parseGmiString(std::string gmiString) {
       addStartQuote();
       startFlag |= START_QUOTE;
     }
-    addPlainText(lastString);
+    addQuote(lastString);
   }
 
 // команда списка
@@ -115,7 +115,7 @@ void Gmi::addHyperLink(std::string URI_adrres, std::string linkText) {
   std::string stringResult;
   stringResult = "<a href = \"" + URI_adrres + "\">" + // start tag
                  linkText +                            // text
-                 "</a>";                               // end tag
+                 "</a><br>";                               // end tag
   htmlDoc.push_back(stringResult);
 }
 
@@ -133,6 +133,14 @@ void Gmi::addEndQuote() {
   std::string stringResult;
   stringResult = "</blockqoute>";
   htmlDoc.push_back(stringResult);
+}
+
+/** Методо добавляет текст строку-цитату
+ */
+void Gmi::addQuote(std::string quoteString){
+    std::string stringResult;
+    stringResult = quoteString + "<br>";
+    htmlDoc.push_back(stringResult);
 }
 
 /** Методо добавляет в html документ тэг начала списка

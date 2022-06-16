@@ -37,3 +37,4 @@ Release/
 cmake-build-debug/
 .vscode/
 
+/htmlresult.html
